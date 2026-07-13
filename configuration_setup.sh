@@ -19,7 +19,7 @@ set -u
 chmod +x "$0" 2>/dev/null   # se hace ejecutable a si mismo para futuras veces
 
 # ---------- Config (ajusta si cambia tu setup) ----------------------
-GATEWAY="192.168.7.1"            # IP del host que hace NAT/ICS
+GATEWAY="192.168.5.1"            # IP del host que hace NAT/ICS
 IFACE="usb0"                     # interfaz por la que sale la BBB
 DNS="8.8.8.8"                    # servidor DNS
 TIME_HOST="http://google.com"    # de aqui se lee la hora (cabecera Date)
