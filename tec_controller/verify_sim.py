@@ -10,7 +10,8 @@ import math
 
 VSUPPLY=1.50; R_TOP=10000.0; R0=10000.0; T0=298.15; BETA=3950.0   # NTC desde REF
 ADS_FS=2.048; ADS_LSB=ADS_FS/32768.0                              # PGA +/-2.048 V
-TEMP_LOW=15.0; TEMP_HIGH=18.0
+TEMP_SET=18.0; TEMP_HYST=0.1                                      # setpoint fijo 18,0 C
+TEMP_LOW=TEMP_SET-TEMP_HYST; TEMP_HIGH=TEMP_SET+TEMP_HYST         # 17.9 / 18.1
 
 print("=== 1) Config del ADS1115 por canal (debe ser single-ended AINx, +/-2.048V, single, 128SPS) ===")
 for ch in range(4):
@@ -39,7 +40,7 @@ for Tc in (10,14,15,16,17,18,20,25,30):
 print(f"  -> error max por cuantizacion: {maxerr:.3f} C\n")
 assert maxerr<0.25, "conversion NTC imprecisa"
 
-print("=== 3) Lazo bang-bang + multiplexado (4 canales, 1 driver, histeresis 15/18) ===")
+print("=== 3) Lazo bang-bang + multiplexado (4 canales, 1 driver, setpoint 18C) ===")
 Tamb, Tcold = 22.0, 8.0                 # ambiente y suelo frio que alcanza el TEC
 tau_warm, tau_cool = 30.0, 8.0          # constantes termicas (s)
 T=[22.0]*4; cooling=[False]*4
@@ -60,10 +61,11 @@ while t<4000.0:
 
 ok=True
 for k in range(4):
-    inband = 14.0<=tmin[k] and tmax[k]<=19.0
+    # con setpoint 18 e histeresis +/-0,1, el regimen debe quedar ceñido a ~18 C
+    inband = 17.0<=tmin[k] and tmax[k]<=18.6
     ok = ok and inband
     print(f"  TEC{k+1}: regimen {tmin[k]:.2f} .. {tmax[k]:.2f} C   {'OK' if inband else 'FUERA'}")
 print(f"\n>>> Sin control (lazo abierto) todos irian a {Tamb:.0f}C (ambiente).")
-print(f">>> Con este control REGULAN los 4 en ~15-18 C: {'SI' if ok else 'NO'}")
+print(f">>> Con este control REGULAN los 4 en ~{TEMP_SET:.1f} C: {'SI' if ok else 'NO'}")
 assert ok, "no regula"
 print("\nTODAS LAS COMPROBACIONES PASAN.")

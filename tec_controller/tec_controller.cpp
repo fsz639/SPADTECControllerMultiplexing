@@ -26,8 +26,12 @@
 #include <linux/i2c-dev.h>
 
 // -------- consigna (para el modo regulate, futuro) --------
-#define TEMP_LOW    15.0
-#define TEMP_HIGH   18.0
+//  Setpoint fijo 18,0 C con histeresis +/-0,1 C (bang-bang):
+//    refria si T > 18,1 ; para si T < 17,9
+#define TEMP_SET    18.0
+#define TEMP_HYST    0.1
+#define TEMP_HIGH   (TEMP_SET + TEMP_HYST)   // 18.1 -> enciende (enfriar)
+#define TEMP_LOW    (TEMP_SET - TEMP_HYST)   // 17.9 -> apaga
 // -------- tiempos --------
 #define SLOT_US      100000   // 100 ms por canal en lazo abierto (ciclo 400 ms).
                               // El paper CAPSat usa 10 ms/canal (40 ms de ciclo);
@@ -112,7 +116,7 @@ static void run_open_loop(){
 
 // ================= MODO REGULACION (futuro) =================
 static void run_regulate(){
-    printf("[TEC] LAZO CERRADO (termostato %.0f-%.0f C).\n",(double)TEMP_LOW,(double)TEMP_HIGH);
+    printf("[TEC] LAZO CERRADO (setpoint %.1f C, histeresis +/-%.1f C).\n",(double)TEMP_SET,(double)TEMP_HYST);
     bool cooling[4]={false,false,false,false};
     while(g_run){
         for(int ch=0; ch<4 && g_run; ++ch){
