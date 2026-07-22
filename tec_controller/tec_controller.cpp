@@ -12,6 +12,8 @@
 //  Hardware: 1x MAX1968 (CTLI fijo ~1,3 V) repartido entre 4 TEC por current
 //  switches (4 GPIO) + On/Off (SHDN). NTC leidas por I2C (ADS1115).
 //  Todo en el ARM (Linux): GPIO por sysfs + I2C por /dev/i2c-2.
+//
+//  NTC alimentadas desde REF (1,50 V) del MAX1968 (no desde 3,3 V).  <-- 2026-07-21
 //=============================================================================
 #include <cstdio>
 #include <cstdint>
@@ -27,7 +29,10 @@
 #define TEMP_LOW    15.0
 #define TEMP_HIGH   18.0
 // -------- tiempos --------
-#define SLOT_US      100000   // 100 ms por canal en lazo abierto
+#define SLOT_US      100000   // 100 ms por canal en lazo abierto (ciclo 400 ms).
+                              // El paper CAPSat usa 10 ms/canal (40 ms de ciclo);
+                              // ambos son irrelevantes frente a la constante
+                              // termica (segundos). 100 ms es comodo para banco.
 #define DEAD_US        2000   // 2 ms de tiempo muerto (SHDN=0) al conmutar
 
 // -------- GPIO (numeros sysfs BBB) --------
@@ -41,10 +46,10 @@ static const int SHDN_GPIO   = 26;
 #define ADS1115_ADDR   0x48
 #define ADS_REG_CONV   0x00
 #define ADS_REG_CONFIG 0x01
-#define ADS_LSB        (4.096 / 32768.0)   // PGA +/-4.096 V
+#define ADS_LSB        (2.048 / 32768.0)   // PGA +/-2.048 V  (NTC desde REF 1,5V)
 
-// -------- divisor NTC: +3V3 -> 10k -> nodo(V) -> NTC -> GND --------
-#define VSUPPLY   3.30
+// -------- divisor NTC: REF(1,50 V) -> 10k -> nodo(V) -> NTC -> GND --------
+#define VSUPPLY   1.50          // <-- NTC alimentadas desde REF, no desde 3,3 V
 #define R_TOP     10000.0
 #define R0_NTC    10000.0
 #define T0_KELVIN 298.15
@@ -61,6 +66,8 @@ static int g_i2c = -1;
 // ---------- GPIO sysfs ----------
 static void gpio_export(int n){ int fd=open("/sys/class/gpio/export",O_WRONLY);
     if(fd>=0){ char b[8]; int l=snprintf(b,sizeof b,"%d",n); if(write(fd,b,l)){} close(fd);} }
+static void gpio_unexport(int n){ int fd=open("/sys/class/gpio/unexport",O_WRONLY);
+    if(fd>=0){ char b[8]; int l=snprintf(b,sizeof b,"%d",n); if(write(fd,b,l)){} close(fd);} }
 static void gpio_dir_out(int n){ char p[64]; snprintf(p,sizeof p,"/sys/class/gpio/gpio%d/direction",n);
     int fd=open(p,O_WRONLY); if(fd>=0){ if(write(fd,"out",3)){} close(fd);} }
 static int  gpio_val_fd(int n){ char p[64]; snprintf(p,sizeof p,"/sys/class/gpio/gpio%d/value",n); return open(p,O_WRONLY); }
@@ -73,7 +80,8 @@ static void switch_to(int ch){ set_shdn(0); usleep(DEAD_US); select_channel(ch);
 
 // ---------- ADS1115 ----------
 static double ads_read_volts(int ch){
-    uint16_t cfg = 0x8000 | ((0x4+ch)<<12) | (0x1<<9) | (0x1<<8) | (0x4<<5) | 0x03;
+    // OS=1 | MUX=single AINch | PGA=2 (+/-2.048V) | MODE=1 single | DR=4 (128SPS) | COMP off
+    uint16_t cfg = 0x8000 | ((0x4+ch)<<12) | (0x2<<9) | (0x1<<8) | (0x4<<5) | 0x03;
     uint8_t w[3]={ADS_REG_CONFIG,(uint8_t)(cfg>>8),(uint8_t)(cfg&0xFF)};
     if(write(g_i2c,w,3)!=3) return NAN;
     usleep(9000);
@@ -108,10 +116,11 @@ static void run_regulate(){
     bool cooling[4]={false,false,false,false};
     while(g_run){
         for(int ch=0; ch<4 && g_run; ++ch){
-            set_shdn(0); usleep(DEAD_US); select_channel(ch);
-            double t=read_temp(ch);
+            set_shdn(0); usleep(DEAD_US);        // apaga SIEMPRE antes de conmutar
+            select_channel(ch);                   // conmutacion a corriente cero
+            double t=read_temp(ch);               // lee la NTC ya con SHDN=0
             if(!std::isnan(t)){ if(t>TEMP_HIGH) cooling[ch]=true; else if(t<TEMP_LOW) cooling[ch]=false; }
-            set_shdn(cooling[ch]?1:0);
+            if(cooling[ch]) set_shdn(1);          // solo entonces, si toca, enciende
             printf("TEC%d: %.1f C %s\n", ch+1, t, cooling[ch]?"[enfriando]":"[reposo]");
             fflush(stdout);
             usleep(cooling[ch]?300000:20000);
@@ -167,5 +176,8 @@ int main(int argc, char** argv){
     for(int i=0;i<4;i++) if(g_sel_fd[i]>=0) close(g_sel_fd[i]);
     if(g_shdn_fd>=0) close(g_shdn_fd);
     if(g_i2c>=0) close(g_i2c);
+    // desexportar los GPIO para no dejarlos colgados (lección del P8_12 "muerto")
+    for(int i=0;i<4;i++) gpio_unexport(SEL_GPIO[i]);
+    gpio_unexport(SHDN_GPIO);
     return 0;
 }

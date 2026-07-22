@@ -4,18 +4,20 @@
 #  2) cadena de medida NTC -> V(ADS, cuantizado) -> T   (misma formula que el .cpp)
 #  3) simulacion del lazo bang-bang con multiplexado real (1 solo driver)
 # No se ejecuta en la BBB; solo demuestra que el algoritmo regula a 15-18 C.
+#
+# NTC alimentadas desde REF (1,50 V), PGA del ADS a +/-2.048 V.   <-- 2026-07-21
 import math
 
-VSUPPLY=3.30; R_TOP=10000.0; R0=10000.0; T0=298.15; BETA=3950.0
-ADS_FS=4.096; ADS_LSB=ADS_FS/32768.0
+VSUPPLY=1.50; R_TOP=10000.0; R0=10000.0; T0=298.15; BETA=3950.0   # NTC desde REF
+ADS_FS=2.048; ADS_LSB=ADS_FS/32768.0                              # PGA +/-2.048 V
 TEMP_LOW=15.0; TEMP_HIGH=18.0
 
-print("=== 1) Config del ADS1115 por canal (debe ser single-ended AINx, +/-4.096V, single, 128SPS) ===")
+print("=== 1) Config del ADS1115 por canal (debe ser single-ended AINx, +/-2.048V, single, 128SPS) ===")
 for ch in range(4):
-    cfg = 0x8000 | ((0x4+ch)<<12) | (0x1<<9) | (0x1<<8) | (0x4<<5) | 0x03
+    cfg = 0x8000 | ((0x4+ch)<<12) | (0x2<<9) | (0x1<<8) | (0x4<<5) | 0x03
     os=(cfg>>15)&1; mux=(cfg>>12)&7; pga=(cfg>>9)&7; mode=(cfg>>8)&1; dr=(cfg>>5)&7
     print(f"  AIN{ch}: cfg=0x{cfg:04X}  OS={os} MUX={mux}(AIN{mux-4}) PGA={pga} MODE={mode} DR={dr}")
-    assert os==1 and mux==4+ch and pga==1 and mode==1 and dr==4, "config ADS1115 mal"
+    assert os==1 and mux==4+ch and pga==2 and mode==1 and dr==4, "config ADS1115 mal"
 print("  -> OK\n")
 
 def T_to_V(Tc):                         # NTC real: temperatura -> tension del nodo (con cuantizacion del ADC)
