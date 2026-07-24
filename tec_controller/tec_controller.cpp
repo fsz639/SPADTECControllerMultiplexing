@@ -79,7 +79,7 @@ static void gpio_write(int fd,int v){ if(fd>=0){ lseek(fd,0,SEEK_SET); char c=v?
 
 // ---------- helpers de alto nivel ----------
 static void select_channel(int ch){ for(int i=0;i<4;i++) gpio_write(g_sel_fd[i], i==ch?1:0); }
-static void set_shdn(int v){ gpio_write(g_shdn_fd, v); }
+static void set_shdn(int v){ gpio_write(g_shdn_fd, v ? 0 : 1); }
 static void switch_to(int ch){ set_shdn(0); usleep(DEAD_US); select_channel(ch); set_shdn(1); } // conmutacion a I=0
 
 // ---------- ADS1115 ----------
