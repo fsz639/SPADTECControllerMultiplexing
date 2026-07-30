@@ -124,6 +124,7 @@ static void run_open_loop(void) {
             for (int i = 0; i < 4; ++i) {
                 printf("TEC%d active | NTC%d = %.1f C\n", i + 1, i + 1, temps[i]);
             }
+            printf("Ctrl+C to stop the TEC controller");
             fflush(stdout);
 
             last_print = now;
