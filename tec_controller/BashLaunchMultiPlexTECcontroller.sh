@@ -1,7 +1,7 @@
 #!/bin/bash
 # Script to launch the automatic Multiplexed TEC system
 
-# Ensure terminal settings are restored on any exit
+# Restore terminal settings on exit
 trap 'stty sane 2>/dev/null' EXIT
 
 # 1. Prompt for sudo password once up front
@@ -14,33 +14,34 @@ SUDO_REFRESH_PID=$!
 # 3. Clean exit handler for Ctrl+C (SIGINT) or SIGTERM
 cleanup() {
     echo -e "\n\n[!] Stopping TEC Controller..."
-    if [ -n "$APP_PID" ]; then
-        # 1. Resume process first (stopped processes ignore SIGINT/SIGTERM)
-        sudo kill -CONT "$APP_PID" 2>/dev/null
-        # 2. Send SIGTERM for a graceful shutdown
-        sudo kill -TERM "$APP_PID" 2>/dev/null
-        
-        # 3. Wait briefly, then force-kill if it refuses to exit
-        sleep 0.2
-        sudo kill -KILL "$APP_PID" 2>/dev/null
-    fi
+    
+    # Unpause the process first in case it was STOPped
+    sudo pkill -CONT -f tec_controller 2>/dev/null
+    
+    # Gracefully terminate by process name
+    sudo pkill -TERM -f tec_controller 2>/dev/null
+    sleep 0.2
+    
+    # Force kill if it's still running
+    sudo pkill -KILL -f tec_controller 2>/dev/null
+
     kill "$SUDO_REFRESH_PID" 2>/dev/null
     stty sane 2>/dev/null
     exit 0
 }
-trap cleanup SIGINT SIGTERM
+trap cleanup SIGINT SIGTERM EXIT
 
 # 4. Set up GPIO pins
 echo "[+] Configuring GPIO pins..."
 sudo ./config_pins_tec.sh
 
-# 5. Launch the main C++ controller process in the background (&)
+# 5. Launch the main C++ controller process in background
 echo "[+] Launching TEC Controller..."
 sudo ./tec_controller &
-APP_PID=$!
+sleep 1
 
 echo "----------------------------------------"
-echo "Application launched with PID: $APP_PID"
+echo "Application launched."
 echo "Press:"
 echo "  Ctrl+C        : Terminate system"
 echo "  Any other key : Pause / Resume execution"
@@ -48,24 +49,25 @@ echo "----------------------------------------"
 
 # 6. Listen for keypresses to toggle Pause / Resume
 PAUSED=0
-while kill -0 "$APP_PID" 2>/dev/null; do
-    # -s prevents typed characters from cluttering the terminal output
+
+# Check process existence directly via pgrep
+while pgrep -f tec_controller >/dev/null; do
     read -r -s -n 1 -t 1 KEY
     READ_STATUS=$?
 
-    # Catch Ctrl+C manually if terminal is in raw mode (ASCII \x03)
+    # Catch Ctrl+C manually if terminal is in raw mode (\x03)
     if [[ "$KEY" == $'\x03' ]]; then
         cleanup
     fi
 
     if [ $READ_STATUS -eq 0 ]; then
         if [ $PAUSED -eq 0 ]; then
-            echo -e "\n[PAUSED] Suspending process PID: $APP_PID..."
-            sudo kill -STOP "$APP_PID"
+            echo -e "\n[PAUSED] Suspending TEC Controller..."
+            sudo pkill -STOP -f tec_controller
             PAUSED=1
         else
-            echo -e "\n[RESUMED] Continuing process PID: $APP_PID..."
-            sudo kill -CONT "$APP_PID"
+            echo -e "\n[RESUMED] Continuing TEC Controller..."
+            sudo pkill -CONT -f tec_controller
             PAUSED=0
         fi
     fi
