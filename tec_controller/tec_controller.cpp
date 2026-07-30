@@ -1,19 +1,17 @@
 //=============================================================================
-// tec_controller.cpp  -  Control TEC de los 4 SPAD (BeagleBone Black)
-// Quantum Labs
+// tec_controller.cpp  -  TEC Control 4 SPAD (BeagleBone Black)
+// QuNet LAb
 //
-//  MODOS (argumento en linea de comandos):
-//    (sin arg) / "open"  -> LAZO ABIERTO: corriente fija, multiplexa los 4 TEC
-//                           (SHDN siempre ON salvo el instante de conmutacion)
-//                           y monitoriza las temperaturas.  <-- USAR AHORA
-//    "regulate"          -> LAZO CERRADO (termostato/histeresis 15-18 C).  <-- FUTURO
-//    "test"              -> MODO PRUEBA MANUAL de banco (comandos por teclado).
+//  MODES (arguments passed thorugh the command line):
+//    (sin arg) / "open"  -> multiplexes 4 TEC (SHDN ON except commuting instance)
+//                           and monitors temperatures.  <-- TO USE
+//    "test"              -> MANUAL TEST MODE (keyboard inputed commands).
 //
 //  Hardware: 1x MAX1968 (CTLI fijo ~1,3 V) repartido entre 4 TEC por current
 //  switches (4 GPIO) + On/Off (SHDN). NTC leidas por I2C (ADS1115).
 //  Todo en el ARM (Linux): GPIO por sysfs + I2C por /dev/i2c-2.
 //
-//  NTC alimentadas desde REF (1,50 V) del MAX1968 (no desde 3,3 V).  <-- 2026-07-21
+//  NTC alimentadas desde REF (1,50 V) del MAX1968 (no desde 3,3 V).
 //=============================================================================
 #include <cstdio>
 #include <cstdint>
@@ -102,60 +100,41 @@ static double read_temp(int ch){
 
 // ================= MODO LAZO ABIERTO (usar ahora) =================
 static void run_open_loop(){
-    printf("[TEC] LAZO ABIERTO: corriente fija, multiplexado + monitorizacion.\n");
     while(g_run){
         for(int ch=0; ch<4 && g_run; ++ch){
             switch_to(ch);                       // enfria este canal (driver ON)
             double t=read_temp(ch);
-            printf("TEC%d activo | NTC%d = %.1f C\n", ch+1, ch+1, t);
+            printf("TEC%d active | NTC%d = %.1f C\n", ch+1, ch+1, t);
             fflush(stdout);
             usleep(SLOT_US);
         }
     }
 }
 
-// ================= MODO REGULACION (futuro) =================
-static void run_regulate(){
-    printf("[TEC] LAZO CERRADO (setpoint %.1f C, histeresis +/-%.1f C).\n",(double)TEMP_SET,(double)TEMP_HYST);
-    bool cooling[4]={false,false,false,false};
-    while(g_run){
-        for(int ch=0; ch<4 && g_run; ++ch){
-            set_shdn(0); usleep(DEAD_US);        // apaga SIEMPRE antes de conmutar
-            select_channel(ch);                   // conmutacion a corriente cero
-            double t=read_temp(ch);               // lee la NTC ya con SHDN=0
-            if(!std::isnan(t)){ if(t>TEMP_HIGH) cooling[ch]=true; else if(t<TEMP_LOW) cooling[ch]=false; }
-            if(cooling[ch]) set_shdn(1);          // solo entonces, si toca, enciende
-            printf("TEC%d: %.1f C %s\n", ch+1, t, cooling[ch]?"[enfriando]":"[reposo]");
-            fflush(stdout);
-            usleep(cooling[ch]?300000:20000);
-        }
-    }
-}
-
 // ================= MODO PRUEBA MANUAL (banco) =================
 static void run_test(){
-    printf("\n=== MODO PRUEBA MANUAL (banco) ===\n"
-           " 1..4  : seleccionar canal (cierra ese current switch)\n"
-           " o / f : SHDN On / oFf (driver encendido/apagado)\n"
-           " r     : leer y mostrar las 4 NTC\n"
-           " x     : todo a reposo (SHDN off, ningun canal)\n"
-           " q     : salir\n"
-           "ATENCION: 'o' da corriente al canal seleccionado. Mide antes con poca corriente.\n\n");
+    printf("\n=== MANUAL TEST MODE ===\n"
+           " 1..4  : select channel (cierra ese current switch)\n"
+           " o / f : SHDN On / Off (driver on/off)\n"
+           " r     : read and display 4 NTC\n"
+           " x     : all OFF (SHDN off, no channel)\n"
+           " q     : exit\n"
+           "ATENTION: 'o' provides current to the selected channel. Read in advance with little current.\n\n");
     int cur_ch=-1, shdn=0;
     char line[32];
     while(g_run){
-        printf("[canal=%s SHDN=%s] > ", cur_ch<0?"-":(cur_ch==0?"1":cur_ch==1?"2":cur_ch==2?"3":"4"), shdn?"ON":"off");
+        printf("[channel=%s SHDN=%s] > ", cur_ch<0?"-":(cur_ch==0?"1":cur_ch==1?"2":cur_ch==2?"3":"4"), shdn?"ON":"off");
         fflush(stdout);
         if(!fgets(line,sizeof line,stdin)) break;     // Ctrl+C o EOF
         char c=line[0];
         if(c=='q') break;
         else if(c>='1'&&c<='4'){ cur_ch=c-'1'; set_shdn(0); shdn=0; select_channel(cur_ch);
-                                 printf(" -> canal %d seleccionado (SHDN puesto a off por seguridad)\n",cur_ch+1); }
-        else if(c=='o'){ if(cur_ch<0) printf(" selecciona antes un canal (1..4)\n");
-                         else { set_shdn(1); shdn=1; printf(" -> SHDN ON: corriente por el canal %d\n",cur_ch+1); } }
+                                 printf(" -> channel %d selected (SHDN off for security)\n",cur_ch+1); }
+        else if(c=='o'){ if(cur_ch<0) printf(" first select a channel (1..4)\n");
+                         else { set_shdn(1); shdn=1; printf(" -> SHDN ON: current to channel %d\n",cur_ch+1); } }
         else if(c=='f'){ set_shdn(0); shdn=0; printf(" -> SHDN off\n"); }
         else if(c=='r'){ for(int ch=0;ch<4;ch++) printf("   NTC%d = %.2f C\n",ch+1,read_temp(ch)); }
-        else if(c=='x'){ set_shdn(0); shdn=0; select_channel(-1); cur_ch=-1; printf(" -> todo a reposo\n"); }
+        else if(c=='x'){ set_shdn(0); shdn=0; select_channel(-1); cur_ch=-1; printf(" -> all off\n"); }
     }
 }
 
@@ -167,21 +146,22 @@ int main(int argc, char** argv){
     set_shdn(0); select_channel(-1);
     // init I2C
     g_i2c=open(I2C_BUS,O_RDWR);
-    if(g_i2c<0 || ioctl(g_i2c,I2C_SLAVE,ADS1115_ADDR)<0){ perror("I2C ADS1115 (solo afecta a la lectura de NTC)"); }
+    if(g_i2c<0 || ioctl(g_i2c,I2C_SLAVE,ADS1115_ADDR)<0){ perror("I2C ADS1115 (only affects NTC reading)"); }
 
     const char* mode = (argc>1)? argv[1] : "open";
     if(!strcmp(mode,"test"))          run_test();
-    else if(!strcmp(mode,"regulate")) run_regulate();
     else                              run_open_loop();
 
-    // salida segura
+    // clean exit
     set_shdn(0); select_channel(-1);
-    printf("\n[TEC] Parado (driver OFF, canales en reposo).\n");
+    printf("\n[TEC] Stopped (driver OFF, channels OFF).\n");
     for(int i=0;i<4;i++) if(g_sel_fd[i]>=0) close(g_sel_fd[i]);
     if(g_shdn_fd>=0) close(g_shdn_fd);
     if(g_i2c>=0) close(g_i2c);
     // desexportar los GPIO para no dejarlos colgados (lección del P8_12 "muerto")
     for(int i=0;i<4;i++) gpio_unexport(SEL_GPIO[i]);
     gpio_unexport(SHDN_GPIO);
+
+    
     return 0;
 }
