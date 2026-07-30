@@ -44,7 +44,6 @@ echo "----------------------------------------"
 echo "Application launched."
 echo "Press:"
 echo "  Ctrl+C        : Terminate system"
-echo "  Any other key : Pause / Resume execution"
 echo "----------------------------------------"
 
 # 6. Listen for keypresses to toggle Pause / Resume

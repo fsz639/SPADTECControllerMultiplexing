@@ -102,18 +102,34 @@ static double read_temp(int ch){
 }
 
 // ================= MODO LAZO ABIERTO (usar ahora) =================
-static void run_open_loop(){
-    while(g_run){
-        for(int ch=0; ch<4 && g_run; ++ch){
-            switch_to(ch);                       // enfria este canal (driver ON)
-            double t=read_temp(ch);
-            printf("TEC%d active | NTC%d = %.1f C\n", ch+1, ch+1, t);
-            fflush(stdout);
+bool enable_print = true; // Set to false to turn off printing
+
+static void run_open_loop(void) {
+    double temps[4] = {0};
+    time_t last_print = 0;
+
+    while (g_run) {
+        // 1. Read all 4 channels
+        for (int ch = 0; ch < 4 && g_run; ++ch) {
+            switch_to(ch);
+            temps[ch] = read_temp(ch);
             usleep(SLOT_US);
+        }
+
+        // 2. Print every 5 seconds if flag is true
+        time_t now = time(NULL);
+        if (enable_print && (now - last_print >= 5)) {
+            printf("\033[H\033[J"); // Clears the screen
+            
+            for (int i = 0; i < 4; ++i) {
+                printf("TEC%d active | NTC%d = %.1f C\n", i + 1, i + 1, temps[i]);
+            }
+            fflush(stdout);
+
+            last_print = now;
         }
     }
 }
-
 // ================= MODO PRUEBA MANUAL (banco) =================
 static void run_test(){
     printf("\n=== MANUAL TEST MODE ===\n"
