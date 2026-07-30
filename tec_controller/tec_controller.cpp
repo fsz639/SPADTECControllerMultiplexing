@@ -22,6 +22,10 @@
 #include <fcntl.h>
 #include <sys/ioctl.h>
 #include <linux/i2c-dev.h>
+#include <iostream>
+#include <atomic>
+
+using namespace std;
 
 // -------- consigna (para el modo regulate, futuro) --------
 //  Setpoint fijo 18,0 C con histeresis +/-0,1 C (bang-bang):
@@ -58,7 +62,6 @@ static const int SHDN_GPIO   = 26;
 #define BETA      3950.0
 
 static volatile sig_atomic_t g_run = 1;
-static void on_sigint(int){ g_run = 0; }
 
 // globals de I/O
 static int g_sel_fd[4] = {-1,-1,-1,-1};
@@ -138,8 +141,28 @@ static void run_test(){
     }
 }
 
+/// Errors handling
+std::atomic<bool> signalReceivedFlag{false};
+static void SignalINTHandler(int s) {
+signalReceivedFlag.store(true);
+cout << "Caught SIGINT" << endl;
+}
+
+static void SignalTERMHandler(int s) {
+signalReceivedFlag.store(true);
+cout << "Caught SIGTERM" << endl;
+}
+
+static void SignalPIPEHandler(int s) {
+signalReceivedFlag.store(true);
+cout << "Caught SIGPIPE" << endl;
+}
+
 int main(int argc, char** argv){
-    signal(SIGINT,on_sigint);
+    /// Errors/actions handling
+     signal(SIGINT, SignalINTHandler);// Interruption signal
+     signal(SIGTERM, SignalTERMHandler); // kill, systemd stop
+
     // init GPIO
     for(int i=0;i<4;i++){ gpio_export(SEL_GPIO[i]); gpio_dir_out(SEL_GPIO[i]); g_sel_fd[i]=gpio_val_fd(SEL_GPIO[i]); }
     gpio_export(SHDN_GPIO); gpio_dir_out(SHDN_GPIO); g_shdn_fd=gpio_val_fd(SHDN_GPIO);

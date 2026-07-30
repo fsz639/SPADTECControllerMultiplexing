@@ -1,0 +1,1 @@
+arm-linux-gnueabihf-g++ -static tec_controller.cpp -o tec_controller
