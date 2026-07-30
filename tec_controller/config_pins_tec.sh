@@ -1,4 +1,5 @@
-#!/usr/bin/env bash
+#!/bin/bash
+##!/usr/bin/env bash
 # Configura los pines de la BBB para el control TEC (GPIO normal, sin PRU).
 #   SEL1..4 -> current switches (C_SW / G3VM)
 #   SHDN    -> On/Off del MAX1968
