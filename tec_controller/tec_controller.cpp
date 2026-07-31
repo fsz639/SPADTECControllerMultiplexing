@@ -118,13 +118,13 @@ static void run_open_loop(void) {
 
         // 2. Print every 5 seconds if flag is true
         time_t now = time(NULL);
-        if (enable_print && (now - last_print >= 5)) {
+        if (enable_print && (now - last_print >= 3)) {
             printf("\033[H\033[J"); // Clears the screen
             
             for (int i = 0; i < 4; ++i) {
                 printf("TEC%d active | NTC%d = %.1f C\n", i + 1, i + 1, temps[i]);
             }
-            printf("Ctrl+C to stop the TEC controller");
+            printf("Ctrl+C to stop the multiplexed TEC controller");
             fflush(stdout);
 
             last_print = now;
