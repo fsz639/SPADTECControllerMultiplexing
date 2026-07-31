@@ -3,7 +3,7 @@
 #   SEL1..4 -> current switches (C_SW / G3VM)
 #   SHDN    -> On/Off del MAX1968
 #   I2C2    -> ADS1115 (lee las 4 NTC)
-set -euo pipefail
+# set -euo pipefail
 
 # Header pins and their corresponding Linux GPIO sysfs numbers:
 # P8_12=44 | P8_11=45 | P8_16=46 | P8_15=47 | P8_14=26
