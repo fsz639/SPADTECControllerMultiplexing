@@ -34,9 +34,6 @@ trap cleanup SIGINT SIGTERM EXIT
 # 4. Set up GPIO pins
 echo "[+] Configuring GPIO pins..."
 sudo ./config_pins_tec.sh
-# Launch it twice to make sure that configurations are applied
-sleep 1
-sudo ./config_pins_tec.sh
 
 # 5. Launch the main C++ controller process in background
 echo "[+] Launching TEC Controller..."
