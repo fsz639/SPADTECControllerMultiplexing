@@ -34,6 +34,8 @@ trap cleanup SIGINT SIGTERM EXIT
 # 4. Set up GPIO pins
 echo "[+] Configuring GPIO pins..."
 sudo ./config_pins_tec.sh
+# Give the BBB pinmux manager time to settle on first boot
+sleep 2
 
 # 5. Launch the main C++ controller process in background
 echo "[+] Launching TEC Controller..."

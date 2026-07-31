@@ -184,23 +184,35 @@ int main(int argc, char** argv){
     /// Errors/actions handling
      signal(SIGINT, SignalINTHandler);// Interruption signal
      signal(SIGTERM, SignalTERMHandler); // kill, systemd stop
-
+     
     // init GPIO
-    for(int i=0; i<4; i++){ 
+    for(int i=0;i<4;i++){ 
         gpio_export(SEL_GPIO[i]); 
     }
     gpio_export(SHDN_GPIO); 
 
-    // Give Linux sysfs time to create the GPIO directories
-    usleep(50000); 
+    // FIRST BOOT FIX: udev and cape manager can take up to a full second 
+    // to create the sysfs files and set permissions on a fresh boot.
+    sleep(1); 
 
-    for(int i=0; i<4; i++){ 
+    for(int i=0;i<4;i++){ 
         gpio_dir_out(SEL_GPIO[i]); 
         g_sel_fd[i]=gpio_val_fd(SEL_GPIO[i]); 
+        
+        // Let us know if sysfs failed!
+        if (g_sel_fd[i] < 0) {
+            printf("[!] CRITICAL: Failed to open GPIO %d! Check sysfs permissions.\n", SEL_GPIO[i]);
+        }
     }
+    
     gpio_dir_out(SHDN_GPIO); 
     g_shdn_fd=gpio_val_fd(SHDN_GPIO);
+    if (g_shdn_fd < 0) {
+        printf("[!] CRITICAL: Failed to open SHDN GPIO %d!\n", SHDN_GPIO);
+    }
+
     set_shdn(0); select_channel(-1);
+
     // init I2C
     g_i2c=open(I2C_BUS,O_RDWR);
     if(g_i2c<0 || ioctl(g_i2c,I2C_SLAVE,ADS1115_ADDR)<0){ perror("I2C ADS1115 (only affects NTC reading)"); }
