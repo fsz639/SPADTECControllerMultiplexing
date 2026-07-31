@@ -20,7 +20,7 @@ echo "--- Configuring Pinmux ---"
 for p in "${gpio_pins[@]}"; do
     # Reset mode to gpio first, then set to output
     sudo config-pin "$p" gpio 2>/dev/null || true
-    sudo config-pin "$p" out  2>/dev/null || true
+    # Handled by the tec_controller.cpp sudo config-pin "$p" out  2>/dev/null || true
 done
 
 echo "--- Configuring I2C2 ---"
