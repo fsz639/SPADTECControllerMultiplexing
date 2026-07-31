@@ -34,17 +34,13 @@ trap cleanup SIGINT SIGTERM EXIT
 # 4. Set up GPIO pins
 echo "[+] Configuring GPIO pins..."
 sudo ./config_pins_tec.sh
+# LAunch it twice to make sure that configurations are applied
+sudo ./config_pins_tec.sh
 
 # 5. Launch the main C++ controller process in background
 echo "[+] Launching TEC Controller..."
 sudo ./tec_controller &
 sleep 1
-
-echo "----------------------------------------"
-echo "Application launched."
-echo "Press:"
-echo "  Ctrl+C        : Terminate system"
-echo "----------------------------------------"
 
 # 6. Listen for keypresses to toggle Pause / Resume
 PAUSED=0
