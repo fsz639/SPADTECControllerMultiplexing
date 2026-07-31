@@ -159,20 +159,25 @@ static void run_test(){
 }
 
 /// Errors handling
+/// Errors handling
 std::atomic<bool> signalReceivedFlag{false};
+
 static void SignalINTHandler(int s) {
-signalReceivedFlag.store(true);
-cout << "Caught SIGINT" << endl;
+    signalReceivedFlag.store(true);
+    g_run = 0; // <-- ADD THIS to break the while loop
+    cout << "\n[!] Caught SIGINT, initiating safe shutdown..." << endl;
 }
 
 static void SignalTERMHandler(int s) {
-signalReceivedFlag.store(true);
-cout << "Caught SIGTERM" << endl;
+    signalReceivedFlag.store(true);
+    g_run = 0; // <-- ADD THIS to break the while loop
+    cout << "\n[!] Caught SIGTERM, initiating safe shutdown..." << endl;
 }
 
 static void SignalPIPEHandler(int s) {
-signalReceivedFlag.store(true);
-cout << "Caught SIGPIPE" << endl;
+    signalReceivedFlag.store(true);
+    g_run = 0; // <-- ADD THIS to break the while loop
+    cout << "\n[!] Caught SIGPIPE, initiating safe shutdown..." << endl;
 }
 
 int main(int argc, char** argv){
@@ -181,8 +186,20 @@ int main(int argc, char** argv){
      signal(SIGTERM, SignalTERMHandler); // kill, systemd stop
 
     // init GPIO
-    for(int i=0;i<4;i++){ gpio_export(SEL_GPIO[i]); gpio_dir_out(SEL_GPIO[i]); g_sel_fd[i]=gpio_val_fd(SEL_GPIO[i]); }
-    gpio_export(SHDN_GPIO); gpio_dir_out(SHDN_GPIO); g_shdn_fd=gpio_val_fd(SHDN_GPIO);
+    for(int i=0; i<4; i++){ 
+        gpio_export(SEL_GPIO[i]); 
+    }
+    gpio_export(SHDN_GPIO); 
+
+    // Give Linux sysfs time to create the GPIO directories
+    usleep(50000); 
+
+    for(int i=0; i<4; i++){ 
+        gpio_dir_out(SEL_GPIO[i]); 
+        g_sel_fd[i]=gpio_val_fd(SEL_GPIO[i]); 
+    }
+    gpio_dir_out(SHDN_GPIO); 
+    g_shdn_fd=gpio_val_fd(SHDN_GPIO);
     set_shdn(0); select_channel(-1);
     // init I2C
     g_i2c=open(I2C_BUS,O_RDWR);
