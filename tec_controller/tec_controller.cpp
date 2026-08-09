@@ -258,11 +258,13 @@ int main(int argc, char** argv) {
     set_shdn(0);
     select_channel(-1);
 
-    // 3. Init I2C
+    // 3. Init I2C - I2C 1 for temperature reading
     g_i2c = open(I2C_BUS, O_RDWR);
     if (g_i2c < 0 || ioctl(g_i2c, I2C_SLAVE, ADS1115_ADDR) < 0) {
         perror("I2C ADS1115");
     }
+
+    // 4. Init I2C - I2C 2 for temperature setpoint DAQ - TODO
 
     const char* mode = (argc > 1) ? argv[1] : "open";
     if (!strcmp(mode, "test")) run_test();
