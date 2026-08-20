@@ -5,9 +5,9 @@
 #   I2C2    -> ADS1115 (reads 4 NTC)
 
 # Header pins and their corresponding Linux GPIO sysfs numbers:
-# P8_12=44 | P8_11=45 | P8_16=46 | P8_15=47 | P8_14=26
-gpio_pins=(P8_12 P8_11 P8_16 P8_15 P8_14)
-gpio_nums=(44 45 46 47 26)
+# P8_7=66 | P8_8=67 | P8_9=69 | P8_10=68 | P8_11=45
+gpio_pins=(P8_7 P8_8 P8_9 P8_10 P8_11)
+gpio_nums=(66 67 69 68 45)
 
 echo "--- Resetting GPIOs ---"
 for num in "${gpio_nums[@]}"; do

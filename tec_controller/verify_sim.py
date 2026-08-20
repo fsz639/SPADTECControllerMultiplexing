@@ -37,7 +37,7 @@ maxerr=0
 for Tc in (10,14,15,16,17,18,20,25,30):
     Tm=V_to_T(T_to_V(Tc)); e=abs(Tm-Tc); maxerr=max(maxerr,e)
     print(f"  T={Tc:5.1f}C -> V={T_to_V(Tc):.4f}V -> Tmeas={Tm:6.2f}C  (err {e:.3f})")
-print(f"  -> cuantization max error: {maxerr:.3f} C\n")
+print(f"  -> quantization max error: {maxerr:.3f} C\n")
 assert maxerr<0.25, "imprecise NTC conversion"
 
 print("=== 3) Bang-bang + multiplexing (4 channels, 1 driver, setpoint 18C) ===")

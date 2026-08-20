@@ -1,6 +1,7 @@
 //=============================================================================
 // tec_controller.cpp  -  TEC Control 4 SPAD (BeagleBone Black)
-// QuNet LAb
+// QuNet Lab
+// Ferran Saigi, Marc Jofre
 //=============================================================================
 #include <cstdio>
 #include <cstdint>
@@ -24,8 +25,8 @@ using namespace std;
 #define SLOT_US      100000   // 100 ms per channel
 #define DEAD_US        2000   // 2 ms dead time (SHDN=0)
 
-static const int SEL_GPIO[4] = { 44, 45, 46, 47 };
-static const int SHDN_GPIO   = 26;
+static const int SEL_GPIO[4] = { 66, 67, 69, 68 }; // In this order in order to activate the physical BBB pins in order (P8.7, P8.8, P8.9, and P8.10)
+static const int SHDN_GPIO   = 45; // BBB pin P8.11
 
 #define I2C_BUS        "/dev/i2c-2"
 #define ADS1115_ADDR   0x48
