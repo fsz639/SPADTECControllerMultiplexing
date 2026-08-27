@@ -1,7 +1,7 @@
 //=============================================================================
 // tec_controller.cpp  -  TEC Control 4 SPAD (BeagleBone Black)
 // QuNet Lab
-// Ferran Saigi, Marc Jofre
+// Miquel Alquézar, Ferran Saigi, Marc Jofre
 //=============================================================================
 #include <cstdio>
 #include <cstdint>
