@@ -6,7 +6,7 @@
 
 # Header pins and their corresponding Linux GPIO sysfs numbers:
 # P8_7=66 | P8_8=67 | P8_9=69 | P8_10=68 | P8_11=45
-gpio_pins=(P8_7 P8_8 P8_9 P8_10 P8_11)
+gpio_pins=(P8_07 P8_08 P8_09 P8_10 P8_11)
 gpio_nums=(66 67 69 68 45)
 
 echo "--- Resetting GPIOs ---"
