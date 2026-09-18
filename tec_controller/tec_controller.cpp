@@ -52,7 +52,8 @@ static volatile sig_atomic_t g_run = 1;
 
 static int g_sel_fd[4] = {-1,-1,-1,-1};
 static int g_shdn_fd = -1;
-static int g_i2c = -1;
+static int g_i2c_adc = -1;
+static int g_i2c_dac = -1;
 
 // ---------- Robust GPIO sysfs Helpers ----------
 static void gpio_export(int n) {
@@ -170,12 +171,12 @@ static bool dac_set_voltage(double volts) {
 static double ads_read_volts(int ch) {
     uint16_t cfg = 0x8000 | ((0x4 + ch) << 12) | (0x2 << 9) | (0x1 << 8) | (0x4 << 5) | 0x03;
     uint8_t w[3] = {ADS_REG_CONFIG, (uint8_t)(cfg >> 8), (uint8_t)(cfg & 0xFF)};
-    if (write(g_i2c, w, 3) != 3) return NAN;
+    if (write(g_i2c_adc, w, 3) != 3) return NAN;
     usleep(9000);
     uint8_t reg = ADS_REG_CONV;
-    if (write(g_i2c, &reg, 1) != 1) return NAN;
+    if (write(g_i2c_adc, &reg, 1) != 1) return NAN;
     uint8_t r[2];
-    if (read(g_i2c, r, 2) != 2) return NAN;
+    if (read(g_i2c_adc, r, 2) != 2) return NAN;
     return (int16_t)((r[0] << 8) | r[1]) * ADS_LSB;
 }
 
@@ -189,7 +190,8 @@ static double read_temp(int ch) {
 // ---------- Open Loop Mode ----------
 bool enable_print = true;
 
-static void run_open_loop(void) {
+static void run_open_loop(double fixed_voltage) {
+    dac_set_voltage(fixed_voltage);
     double temps[4] = {0};
     time_t last_print = 0;
 
@@ -333,12 +335,16 @@ int main(int argc, char** argv) {
     select_channel(-1);
 
     // 3. Init I2C - I2C 2 for temperature reading
-    g_i2c = open(I2C_BUS, O_RDWR);
-    if (g_i2c < 0 || ioctl(g_i2c, I2C_SLAVE, ADS1115_ADDR) < 0) {
+    g_i2c_adc = open(I2C_BUS, O_RDWR);
+    if (g_i2c_adc < 0 || ioctl(g_i2c_adc, I2C_SLAVE, ADS1115_ADDR) < 0) {
         perror("I2C ADS1115");
     }
 
     // 4. Init I2C - I2C 1 for temperature setpoint DAQ - TODO
+    g_i2c_dac = open(I2C_BUS_DAC, O_RDWR);
+    if (g_i2c_dac < 0 || ioctl(g_i2c_dac, I2C_SLAVE, MCP4725_ADDR) < 0) {
+        perror("I2C MCP4725 DAC");
+    }
 
 const char* mode = (argc > 1) ? argv[1] : "closed";
 
@@ -363,7 +369,8 @@ const char* mode = (argc > 1) ? argv[1] : "closed";
     }
     if (g_shdn_fd >= 0) close(g_shdn_fd);
     gpio_unexport(SHDN_GPIO);
-    if (g_i2c >= 0) close(g_i2c);
+    if (g_i2c_adc >= 0) close(g_i2c_adc);
+    if (g_i2c_dac >= 0) close(g_i2c_dac);
 
     return 0;
 }
