@@ -23,11 +23,11 @@ for p in "${gpio_pins[@]}"; do
     # Handled by the tec_controller.cpp sudo config-pin "$p" out  2>/dev/null || true
 done
 
-echo "--- Configuring I2C2 ---"
+echo "--- Configuring I2C_2 ---"
 sudo config-pin P9_19 i2c 2>/dev/null || true   # SCL_2
 sudo config-pin P9_20 i2c 2>/dev/null || true   # SDA_2
 
-echo "--- Configuring I2C1 ---"
+echo "--- Configuring I2C_1 ---"
 sudo config-pin P9_17 i2c 2>/dev/null || true   # SCL_1
 sudo config-pin P9_18 i2c 2>/dev/null || true   # SDA_1
 
