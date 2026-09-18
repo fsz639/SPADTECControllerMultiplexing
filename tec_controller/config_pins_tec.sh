@@ -24,8 +24,12 @@ for p in "${gpio_pins[@]}"; do
 done
 
 echo "--- Configuring I2C2 ---"
-sudo config-pin P9_19 i2c 2>/dev/null || true   # SCL
-sudo config-pin P9_20 i2c 2>/dev/null || true   # SDA
+sudo config-pin P9_19 i2c 2>/dev/null || true   # SCL_2
+sudo config-pin P9_20 i2c 2>/dev/null || true   # SDA_2
+
+echo "--- Configuring I2C1 ---"
+sudo config-pin P9_17 i2c 2>/dev/null || true   # SCL_1
+sudo config-pin P9_18 i2c 2>/dev/null || true   # SDA_1
 
 echo "--- Configuring state of pins ---"
 for p in "${gpio_pins[@]}"; do 
