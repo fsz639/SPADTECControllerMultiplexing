@@ -28,11 +28,19 @@ using namespace std;
 static const int SEL_GPIO[4] = { 66, 67, 69, 68 }; // In this order in order to activate the physical BBB pins in order (P8.7, P8.8, P8.9, and P8.10)
 static const int SHDN_GPIO   = 45; // BBB pin P8.11
 
+//  I2C-2 configuration: ADS1115 (P9.19 / P9.20)
 #define I2C_BUS        "/dev/i2c-2"
 #define ADS1115_ADDR   0x48
 #define ADS_REG_CONV   0x00
 #define ADS_REG_CONFIG 0x01
 #define ADS_LSB        (2.048 / 32768.0)
+
+//  I2C-1 configuration: DAC MCP4725 (P9.17 / P9.18)
+#define I2C_BUS_DAC     "/dev/i2c-1"
+#define MCP4725_ADDR    0x60     // Direccion habitual (o 0x61)
+#define DAC_VDD         5.00     // Tensión real de alimentacion VDD del DAC (5.0V)
+#define MAX_SETPOINT_V  1.50     // Limite absoluto seguro para la entrada REF del MAX1968
+#define DAC_MAX_RAW     4095.0   // Resolucion de 12 bits (2^12 - 1)
 
 #define VSUPPLY   1.50
 #define R_TOP     10000.0
@@ -109,7 +117,7 @@ static int gpio_val_fd(int n) {
 
 static void gpio_write(int fd, int v) {
     if (fd >= 0) {
-        lseek(fd, 0, SEEK_SET);
+              lseek(fd, 0, SEEK_SET);
         char c = v ? '1' : '0';
         if (write(fd, &c, 1) < 0) {
             // Ignore unused return warning
@@ -133,6 +141,29 @@ static void switch_to(int ch) {
     usleep(DEAD_US);
     select_channel(ch);
     set_shdn(1);
+}
+
+// ---------- DAC MCP4725 ----------
+static bool dac_set_voltage(double volts) {
+    if (g_i2c_dac < 0) return false;
+
+    // Set maximum setpoint to 1.5V
+    if (volts < 0.0) volts = 0.0;
+    if (volts > MAX_SETPOINT_V) volts = MAX_SETPOINT_V;
+
+    // Volts proportional to VCC (5V)
+    uint16_t raw = (uint16_t)((volts / DAC_VDD) * DAC_MAX_RAW);
+
+    // Write data
+    uint8_t data[2];
+    data[0] = (uint8_t)((raw >> 8) & 0x0F);
+    data[1] = (uint8_t)(raw & 0xFF);
+
+    if (write(g_i2c_dac, data, 2) != 2) {
+        fprintf(stderr, "[!] Error when writing in DAC MCP4725\n");
+        return false;
+    }
+    return true;
 }
 
 // ---------- ADS1115 ----------
@@ -213,6 +244,48 @@ static void run_test() {
     }
 }
 
+// ------------ Closed loop mode ------------
+
+static void run_closed_loop(void) {
+    double temp_setpoint = TEMP_SET;
+    double Kp = 0.05; // Proportional gain
+    double temps[4] = {0};
+    double current_dac_v = 0.75; // Initial center point voltage (25ºC)
+    time_t last_print = 0;
+
+    printf("[CLOSED LOOP] Initiating temperature control (Target: %.1f C)...\n", temp_setpoint);
+
+    while (g_run) {
+        for (int ch = 0; ch < 4 && g_run; ++ch) {
+            switch_to(ch);
+            temps[ch] = read_temp(ch);
+
+            if (!isnan(temps[ch])) {
+                // Basic control algorithm
+                double error = temps[ch] - temp_setpoint;
+                current_dac_v = 0.75 + (Kp * error);
+                
+                // Apply correction to DAC in every cycle
+                dac_set_voltage(current_dac_v);
+            }
+            usleep(SLOT_US);
+        }
+
+        time_t now = time(NULL);
+        if (enable_print && (now - last_print >= 3)) {
+            printf("\033[H\033[J");
+            printf("=== LOOP MODE ABORTED (Target: %.1f C) ===\n", temp_setpoint);
+            for (int i = 0; i < 4; ++i) {
+                printf("TEC%d active | NTC%d = %.2f C | DAC Setpoint = %.3f V\n", 
+                       i + 1, i + 1, temps[i], current_dac_v);
+            }
+            printf("\nCtrl+C to stop controller.\n");
+            fflush(stdout);
+            last_print = now;
+        }
+    }
+}
+
 // ---------- Signal Handlers ----------
 std::atomic<bool> signalReceivedFlag{false};
 
@@ -259,17 +332,25 @@ int main(int argc, char** argv) {
     set_shdn(0);
     select_channel(-1);
 
-    // 3. Init I2C - I2C 1 for temperature reading
+    // 3. Init I2C - I2C 2 for temperature reading
     g_i2c = open(I2C_BUS, O_RDWR);
     if (g_i2c < 0 || ioctl(g_i2c, I2C_SLAVE, ADS1115_ADDR) < 0) {
         perror("I2C ADS1115");
     }
 
-    // 4. Init I2C - I2C 2 for temperature setpoint DAQ - TODO
+    // 4. Init I2C - I2C 1 for temperature setpoint DAQ - TODO
 
-    const char* mode = (argc > 1) ? argv[1] : "open";
-    if (!strcmp(mode, "test")) run_test();
-    else run_open_loop();
+const char* mode = (argc > 1) ? argv[1] : "closed";
+
+    if (!strcmp(mode, "test")) {
+        run_test();
+    } else if (!strcmp(mode, "open")) {
+        double v_init = (argc > 2) ? atof(argv[2]) : 0.75;
+        run_open_loop(v_init);
+    } else {
+        run_closed_loop();
+    }
+
 
     // 4. Cleanup
     set_shdn(0);
