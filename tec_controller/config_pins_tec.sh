@@ -6,7 +6,7 @@
 
 # Header pins and their corresponding Linux GPIO sysfs numbers:
 # P8_7=66 | P8_8=67 | P8_9=69 | P8_10=68 | P8_11=45
-gpio_pins=(P8_7 P8_8 P8_9 P8_10 P8_11)
+gpio_pins=(P8_07 P8_08 P8_09 P8_10 P8_11)
 gpio_nums=(66 67 69 68 45)
 
 echo "--- Resetting GPIOs ---"
@@ -23,9 +23,13 @@ for p in "${gpio_pins[@]}"; do
     # Handled by the tec_controller.cpp sudo config-pin "$p" out  2>/dev/null || true
 done
 
-echo "--- Configuring I2C2 ---"
-sudo config-pin P9_19 i2c 2>/dev/null || true   # SCL
-sudo config-pin P9_20 i2c 2>/dev/null || true   # SDA
+echo "--- Configuring I2C_2 ---"
+sudo config-pin P9_19 i2c 2>/dev/null || true   # SCL_2
+sudo config-pin P9_20 i2c 2>/dev/null || true   # SDA_2
+
+echo "--- Configuring I2C_1 ---"
+sudo config-pin P9_17 i2c 2>/dev/null || true   # SCL_1
+sudo config-pin P9_18 i2c 2>/dev/null || true   # SDA_1
 
 echo "--- Configuring state of pins ---"
 for p in "${gpio_pins[@]}"; do 
