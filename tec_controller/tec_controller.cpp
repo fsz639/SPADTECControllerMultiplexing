@@ -309,6 +309,43 @@ static void SignalTERMHandler(int s) {
     g_run = 0;
 }
 
+// Single channel continuous mode (NO multiplexing) to isolate thermal bottleneck
+static void run_single_loop(int active_ch, double target_temp) {
+    if (active_ch < 0 || active_ch > 3) active_ch = 0;
+
+    printf("[PRUEBA CANAL ÚNICO] Fijando TEC%d a modo continuo 100%%...\n", active_ch + 1);
+
+    // 1. Convert setpoint temperature to voltage (DAC)
+    double dac_setpoint_v = temp_to_volts(target_temp);
+    dac_set_voltage(dac_setpoint_v);
+
+    // 2. Select active channel
+    switch_to(active_ch);
+
+    double temp_act = 0.0;
+    time_t last_print = 0;
+
+    while (g_run) {
+        // 3. Temperature read
+        temp_act = read_temp(active_ch);
+
+        // 4. Terminal info
+        time_t now = time(NULL);
+        if (enable_print && (now - last_print >= 1)) {
+            printf("\033[H\033[J");
+            printf("=== TEST MODE: SINGLE CHANNEL WITH NO MULTIPLEXING ===\n\n");
+            printf("Active channel   : TEC%d\n", active_ch + 1);
+            printf("Objective (Set) : %5.1f C\n", target_temp);
+            printf("Current Temp    : %6.2f C\n", temp_act);
+            printf("DAC REF: %.3f V\n\n", dac_setpoint_v);
+            printf("Driver continuously ON (SHDN=1). Ctrl+C to Stop.\n");
+            fflush(stdout);
+            last_print = now;
+        }
+        usleep(SLOT_US);
+    }
+}
+
 // ---------- Main ----------
 int main(int argc, char** argv) {
     signal(SIGINT, SignalINTHandler);
@@ -361,6 +398,11 @@ int main(int argc, char** argv) {
     } else if (!strcmp(mode, "open")) {
         double v_init = (argc > 2) ? atof(argv[2]) : 0.75;
         run_open_loop(v_init);
+      } else if (!strcmp(mode, "single")) {
+        // Use example: ./tec_controller single <num_channel 1..4> <temp_obj>
+        int ch = (argc > 2) ? atoi(argv[2]) - 1 : 0;  
+        double target = (argc > 3) ? atof(argv[3]) : TEMP_SET; 
+        run_single_loop(ch, target);
     } else {
         // Closed loop mode: parse up to 4 temperature arguments (or default to TEMP_SET)
         double target_temps[4] = {TEMP_SET, TEMP_SET, TEMP_SET, TEMP_SET};
