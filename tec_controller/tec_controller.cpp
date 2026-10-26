@@ -21,7 +21,7 @@ using namespace std;
 #define TEMP_SET    18.0
 
 // Timing configuration
-#define SLOT_US      10000   // 100 ms active time per channel
+#define SLOT_US      100000   // 100 ms active time per channel
 #define DEAD_US        2000   // 2 ms dead time (SHDN=0) during channel switching
 
 // Hardware pin mapping
