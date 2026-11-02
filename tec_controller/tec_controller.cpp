@@ -391,6 +391,8 @@ int main(int argc, char** argv) {
     if (g_i2c_adc < 0 || ioctl(g_i2c_adc, I2C_SLAVE, ADS1115_ADDR) < 0) {
         perror("I2C ADS1115");
     }
+    
+    usleep(1000);
 
     g_i2c_dac = open(I2C_BUS_DAC, O_RDWR);
     if (g_i2c_dac < 0 || ioctl(g_i2c_dac, I2C_SLAVE, MCP4725_ADDR) < 0) {
