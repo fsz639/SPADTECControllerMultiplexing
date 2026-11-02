@@ -154,6 +154,11 @@ static bool dac_set_voltage(double volts) {
     uint8_t data[2];
     data[0] = (uint8_t)((raw >> 8) & 0x0F);
     data[1] = (uint8_t)(raw & 0xFF);
+    
+    // digital value print
+    printf("[DAC] setpoint %.3f V -> Digital value (12-bit): %u | Bytes sent: [0x%02X, 0x%02X]\n", 
+           volts, raw, data[0], data[1]);
+
 
     if (write(g_i2c_dac, data, 2) != 2) {
         fprintf(stderr, "[!] Error writing to DAC MCP4725\n");
