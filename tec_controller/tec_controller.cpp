@@ -30,15 +30,15 @@ using namespace std;
 static const int SEL_GPIO[4] = { 66, 67, 69, 68 }; // P8.7, P8.8, P8.9, and P8.10
 static const int SHDN_GPIO   = 45; // P8.11 (Driver Shutdown)
 
-// I2C-2 configuration: ADS1115 ADC (P9.19 / P9.20)
-#define I2C_BUS        "/dev/i2c-2"
+// I2C-2 configuration: ADS1115 ADC (P9.17 / P9.18) // TODO: I2C BBB bus 1 is not really operatoinal (so we will not have NTC readings)
+#define I2C_BUS        "/dev/i2c-1"
 #define ADS1115_ADDR   0x48
 #define ADS_REG_CONV   0x00
 #define ADS_REG_CONFIG 0x01
 #define ADS_LSB        (2.048 / 32768.0)
 
-// I2C-1 configuration: MCP4725 DAC (P9.17 / P9.18)
-#define I2C_BUS_DAC     "/dev/i2c-1"
+// I2C-1 configuration: MCP4725 DAC (P9.19 / P9.20)
+#define I2C_BUS_DAC     "/dev/i2c-2"
 #define MCP4725_ADDR    0x60     // Standard address
 #define DAC_VDD         5.00     // DAC supply voltage (5.0V)
 #define MAX_SETPOINT_V  1.50     // Absolute maximum safe limit for MAX1968 CTLI pin
@@ -158,8 +158,8 @@ static bool dac_set_voltage(double volts) {
     data[1] = (uint8_t)(raw & 0xFF);
     
     // digital value print
-    printf("[DAC] setpoint %.3f V -> Digital value (12-bit): %u | Bytes sent: [0x%02X, 0x%02X]\n", 
-           volts, raw, data[0], data[1]);
+    //printf("[DAC] setpoint %.3f V -> Digital value (12-bit): %u | Bytes sent: [0x%02X, 0x%02X]\n", 
+           //volts, raw, data[0], data[1]);
 
 
     if (write(g_i2c_dac, data, 2) != 2) {
@@ -392,8 +392,6 @@ int main(int argc, char** argv) {
         perror("I2C ADS1115");
     }
     
-    usleep(1000);
-
     g_i2c_dac = open(I2C_BUS_DAC, O_RDWR);
     if (g_i2c_dac < 0 || ioctl(g_i2c_dac, I2C_SLAVE, MCP4725_ADDR) < 0) {
         perror("I2C MCP4725 DAC");
