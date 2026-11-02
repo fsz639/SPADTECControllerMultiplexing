@@ -14,6 +14,8 @@
 #include <linux/i2c-dev.h>
 #include <iostream>
 #include <atomic>
+#include <cerrno>
+#include <cstring>
 
 using namespace std;
 
@@ -161,9 +163,9 @@ static bool dac_set_voltage(double volts) {
 
 
     if (write(g_i2c_dac, data, 2) != 2) {
-        fprintf(stderr, "[!] Error writing to DAC MCP4725\n");
-        return false;
-    }
+    fprintf(stderr, "[!] Error writing to DAC MCP4725: %s (errno %d)\n", strerror(errno), errno);
+    return false;
+}
     return true;
 }
 
