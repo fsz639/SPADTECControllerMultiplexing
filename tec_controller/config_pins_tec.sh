@@ -28,8 +28,8 @@ sudo config-pin P9_19 i2c 2>/dev/null || true   # SCL_2
 sudo config-pin P9_20 i2c 2>/dev/null || true   # SDA_2
 
 echo "--- Configuring I2C_1 ---"
-sudo config-pin P9_17 i2c 2>/dev/null || true   # SCL_1
-sudo config-pin P9_18 i2c 2>/dev/null || true   # SDA_1
+sudo config-pin P9_24 i2c 2>/dev/null || true   # SCL_1
+sudo config-pin P9_26 i2c 2>/dev/null || true   # SDA_1
 
 echo "--- Configuring state of pins ---"
 for p in "${gpio_pins[@]}"; do 

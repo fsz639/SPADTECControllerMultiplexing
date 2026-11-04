@@ -30,7 +30,7 @@ using namespace std;
 static const int SEL_GPIO[4] = { 66, 67, 69, 68 }; // P8.7, P8.8, P8.9, and P8.10
 static const int SHDN_GPIO   = 45; // P8.11 (Driver Shutdown)
 
-// I2C-2 configuration: ADS1115 ADC (P9.17 / P9.18) // TODO: I2C BBB bus 1 is not really operatoinal (so we will not have NTC readings)
+// I2C-2 configuration: ADS1115 ADC (P9.24 / P9.26) // TODO: I2C BBB bus 1 is not really operatoinal (so we will not have NTC readings)
 #define I2C_BUS        "/dev/i2c-1"
 #define ADS1115_ADDR   0x48
 #define ADS_REG_CONV   0x00
