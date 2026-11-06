@@ -31,14 +31,14 @@ static const int SEL_GPIO[4] = { 66, 67, 69, 68 }; // P8.7, P8.8, P8.9, and P8.1
 static const int SHDN_GPIO   = 45; // P8.11 (Driver Shutdown)
 
 // I2C-2 configuration: ADS1115 ADC (P9.24 / P9.26)
-#define I2C_BUS        "/dev/i2c-2"
+#define I2C_BUS        "/dev/i2c-1"
 #define ADS1115_ADDR   0x48
 #define ADS_REG_CONV   0x00
 #define ADS_REG_CONFIG 0x01
 #define ADS_LSB        (2.048 / 32768.0)
 
 // I2C-1 configuration: MCP4725 DAC (P9.19 / P9.20)
-#define I2C_BUS_DAC     "/dev/i2c-1"
+#define I2C_BUS_DAC     "/dev/i2c-2"
 #define MCP4725_ADDR    0x60     // Standard address
 #define DAC_VDD         5.00     // DAC supply voltage (5.0V)
 #define MAX_SETPOINT_V  1.50     // Absolute maximum safe limit for MAX1968 CTLI pin
