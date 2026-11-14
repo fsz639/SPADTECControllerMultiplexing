@@ -49,7 +49,7 @@ static const int SHDN_GPIO   = 45; // P8.11 (Driver Shutdown)
 #define R_TOP     10000.0
 #define R0_NTC    10000.0
 #define T0_KELVIN 298.15
-#define BETA      3950.0
+#define BETA      4035.0
 
 static volatile sig_atomic_t g_run = 1;
 
