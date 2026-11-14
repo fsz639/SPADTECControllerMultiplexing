@@ -170,10 +170,13 @@ static bool dac_set_voltage(double volts) {
 }
 
 static double temp_to_volts(double target_temp_c) {
-    double target_k = target_temp_c + 273.15;
-    double exponent = (1.0 / target_k) - (1.0 / T0_KELVIN);
-    double r_ntc = R0_NTC * exp(BETA * exponent);
-    double v_dac = VSUPPLY * (r_ntc / (R_TOP + r_ntc));
+    // THEORETICAL DAC VALUE USING BETA EQUATION (NOT ACCURATE)
+    double target_k = target_temp_c + 273.15; 
+    //double exponent = (1.0 / target_k) - (1.0 / T0_KELVIN);
+    //double r_ntc = R0_NTC * exp(BETA * exponent);
+    //double v_dac = VSUPPLY * (r_ntc / (R_TOP + r_ntc));
+    // VALUE POST CALIBRATION
+    double v_dac = (70.199 - target_temp_c) / 65.158;
     return v_dac;
 }
 
@@ -200,7 +203,8 @@ static double read_temp(int ch) {
     if (v <= 0.0 || v >= VSUPPLY) return NAN;
     
     double R = R_TOP * v / (VSUPPLY - v);
-    return 1.0 / (1.0 / T0_KELVIN + (1.0 / BETA) * log(R / R0_NTC)) - 273.15;
+    //return 1.0 / (1.0 / T0_KELVIN + (1.0 / BETA) * log(R / R0_NTC)) - 273.15; // Theoretical temperature value (not accurate)
+    return (-65.158 * v) + 70.199; // With post-calibration
 }
 
 // ---------- Operational Modes ----------
